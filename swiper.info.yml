@@ -1,0 +1,11 @@
+name: Swiper
+description: Swiper is a ultra lightweight mobile touch slider solution.
+type: module
+core: 8.x
+package: Swiper
+dependencies:
+  - drupal:image
+  - drupal:libraries
+library_dependencies:
+  - swiper
+configure: entity.swiper.collection
