@@ -11,20 +11,15 @@
     attach: function (context, settings) {
       var sliders = [];
       var id;
-      if ($.type(settings.flexslider) !== 'undefined' && $.type(settings.flexslider.instances) !== 'undefined') {
+      if ($.type(settings.swiper) !== 'undefined'
+        && $.type(settings.swiper.instances) !== 'undefined') {
 
-        for (id in settings.flexslider.instances) {
+        for (id in settings.swiper.instances) {
 
-          if (settings.flexslider.instances.hasOwnProperty(id)) {
-            if ($.type(settings.flexslider.optionsets) !== 'undefined' && settings.flexslider.instances[id] in settings.flexslider.optionsets) {
-              if (settings.flexslider.optionsets[settings.flexslider.instances[id]].asNavFor !== '') {
-                // We have to initialize all the sliders which are "asNavFor" first.
-                _flexslider_init(id, settings.flexslider.optionsets[settings.flexslider.instances[id]], context);
-              }
-              else {
-                // Everyone else is second.
-                sliders[id] = settings.flexslider.optionsets[settings.flexslider.instances[id]];
-              }
+          if (settings.swiper.instances.hasOwnProperty(id)) {
+            if ($.type(settings.swiper.options) !== 'undefined'
+              && settings.swiper.instances[id] in settings.swiper.options) {
+                sliders[id] = settings.swiper.options[settings.swiper.instances[id]];
             }
           }
         }
@@ -32,57 +27,31 @@
       // Slider set.
       for (id in sliders) {
         if (sliders.hasOwnProperty(id)) {
-          _flexslider_init(id, settings.flexslider.optionsets[settings.flexslider.instances[id]], context);
+          _swiper_init(id, settings.swiper.options[settings.swiper.instances[id]], context);
         }
       }
     }
   };
 
   /**
-   * Initialize the flexslider instance.
+   * Initialize the swiper instance.
    *
    * @param {string} id
-   * Id selector of the flexslider object.
-   * @param {object} optionset
-   * The optionset to apply to the flexslider object.
+   * Id selector of the swiper object.
+   * @param {object} options
+   * The options to apply to the swiper object.
    * @param {object} context
    * The DOM context.
      * @private
      */
-  function _flexslider_init(id, optionset, context) {
-    $('#' + id, context).once('flexslider').each(function () {
-      // Remove width/height attributes.
-      // @todo load the css path from the settings
-      $(this).find('ul.slides > li > *').removeAttr('width').removeAttr('height');
-
-      if (optionset) {
-        // Add events that developers can use to interact.
-        $(this).swiper($.extend(optionset, {
-          start: function (slider) {
-            slider.trigger('start', [slider]);
-          },
-          before: function (slider) {
-            slider.trigger('before', [slider]);
-          },
-          after: function (slider) {
-            slider.trigger('after', [slider]);
-          },
-          end: function (slider) {
-            slider.trigger('end', [slider]);
-          },
-          added: function (slider) {
-            slider.trigger('added', [slider]);
-          },
-          removed: function (slider) {
-            slider.trigger('removed', [slider]);
-          },
-          init: function (slider) {
-            slider.trigger('init', [slider]);
-          }
-        }));
+  function _swiper_init(id, options, context) {
+    $('#' + id, context).once('swiper').each(function () {
+      if (options) {
+        // @TODO implement integration with options.
+        new Swiper('#' + id, {});
       }
       else {
-        $(this).swiper();
+        new Swiper('#' + id);
       }
     });
   }
