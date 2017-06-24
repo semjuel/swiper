@@ -10,6 +10,8 @@
 
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\NestedArray;
+use Drupal\swiper\Entity\Swiper;
+use Drupal\swiper\SwiperDefaults;
 
 /**
  * Prepares variables for swiper template.
@@ -20,10 +22,11 @@ function template_preprocess_swiper(&$variables) {
 	// Reference configuration variables.
 	$settings = &$variables['swiper']['settings'];
 	$items = &$variables['swiper']['items'];
+	$options = &$settings['options'];
 
-	// Set the default container type.
-	if (empty($settings['type'])) {
-		$settings['type'] = 'ul';
+	// Load the selected options.
+	if (!empty($options)) {
+		$options = Swiper::load($options);
 	}
 
 	// Configure attributes for containing elements.
@@ -39,16 +42,11 @@ function template_preprocess_swiper(&$variables) {
 		$attributes['id'] = 'swiper-' . ++$swiper_id;
 	}
 
-	// Add the namespace to any classes.
-	// @todo figure out what this is supposed to do
-	if (!empty($attributes['class']) && !empty($options['namespace'])) {
-		foreach ($attributes['class'] as $key => $value) {
-			$attributes['class'][$key] = $options['namespace'] . $value;
-		}
-	}
-
 	// Add the swiper class to be namespaced.
 	$attributes['class'][] = 'swiper';
+
+	// Add the options name as a class to the container.
+	$attributes['class'][] = 'options-' . Html::getClass($options->id());
 
 	// Add the image style name as a class to the container.
 	if (!empty($settings['image_style'])) {
@@ -67,7 +65,7 @@ function template_preprocess_swiper(&$variables) {
 
 	// Finally, add the configuration to the page.
 	$attached = [];
-	// $attached = flexslider_add($variables['attributes']['id'], $variables['flexslider']['settings']['optionset']);
+	$attached = swiper_add($variables['attributes']['id'], $variables['swiper']['settings']['options']);
 	$variables['#attached'] = $attached;
 }
 
@@ -78,10 +76,11 @@ function template_preprocess_swiper(&$variables) {
  */
 function template_preprocess_swiper_list(&$variables) {
 	// Reference configuration variables.
+	$options = &$variables['settings']['options'];
 	$items = &$variables['items'];
 	$attributes = &$variables['attributes'];
 
-	$attributes['class'][] = 'slides';
+	$attributes['class'][] = 'swiper-wrapper';
 
 	// Build the list.
 	$variables['content']['list'] = [];
@@ -98,6 +97,9 @@ function template_preprocess_swiper_list(&$variables) {
 				'#theme' => 'swiper_list_item',
 				'#item' => $item['slide'],
 				'#caption' => $caption,
+				'#settings' => [
+					'options' => $options,
+				],
 			];
 		}
 	}
@@ -111,4 +113,46 @@ function template_preprocess_swiper_list(&$variables) {
  */
 function template_preprocess_swiper_list_item(&$variables) {
 
+	// Reference configuration variables.
+	$item = &$variables['item'];
+	$settings = &$variables['settings'];
+	$caption = &$variables['caption'];
+	$attributes = &$variables['attributes'];
+	/** @var \Drupal\swiper\Entity\Swiper $options */
+	$options = $settings['options'];
+
+	// Add swiper slide item class.
+	$attributes['class'][] = 'swiper-slide';
+
+	// Generated thumbnail support.
+	// @TODO review this piece of code.
+	if ($options->getOption('controlNav') === "thumbnails") {
+		// If the thumbnails are enabled in the options,
+		// extract the url to set as the thumbnail data.
+		$src = [];
+		if (!preg_match("/<img.+?src=[\"'](.+?)[\"'].+?>/", $item, $src)) {
+			preg_match("/<img.+?srcset=[\"'](.+?)[\"'].+?>/", $item, $src);
+		}
+
+		if (!empty($src[1])) {
+			$attributes['data-thumb'] = $src[1];
+		}
+
+		// Let's also get the alt attribute to apply to thumbnails.
+		// This only works in library version 2.6+.
+		$alt = [];
+		preg_match("/<img.+?alt=[\"'](.+?)[\"'].+?>/", $item, $alt);
+
+		if (!empty($alt)) {
+			$attributes['data-thumb-alt'] = $alt[1];
+		}
+	}
+
+	if ($options->getOption('thumbCaptions') and !empty($caption)) {
+		$attributes['data-thumbcaption'] = $caption;
+		// Prevent captions from appearing in the slider as well.
+		if (FALSE === $options->getOption('thumbCaptionsBoth')) {
+			$caption = '';
+		}
+	}
 }

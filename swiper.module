@@ -81,12 +81,12 @@ function swiper_library_info_alter(&$libraries, $extension) {
     }
 
     // Set the correct path to where the library was downloaded.
-    $libraries['swiper']['js'][$library_path . '/swiper.jquery.min.js'] = $libraries['flexslider']['js']['swiper.jquery.min.js'];
+    $libraries['swiper']['js'][$library_path . '/swiper.jquery.min.js'] = $libraries['swiper']['js']['swiper.jquery.min.js'];
     unset($libraries['swiper']['js']['swiper.jquery.min.js']);
 
     if (!empty($libraries['swiper']['css'])) {
-      $libraries['swiper']['css']['component'][$library_path . '/flexslider.css'] = $libraries['flexslider']['css']['component']['flexslider.css'];
-      unset($libraries['flexslider']['css']['component']['flexslider.css']);
+      $libraries['swiper']['css']['component'][$library_path . '/swiper.css'] = $libraries['swiper']['css']['component']['swiper.css'];
+      unset($libraries['swiper']['css']['component']['swiper.css']);
     }
 
     // Enable debug mode.
@@ -137,8 +137,8 @@ function swiper_add($id = NULL, $options = NULL) {
   // Check optionset value.
   if (is_string($options)) {
     $name = $options;
-    $option = Swiper::load($name);
-    if (empty($option)) {
+    $options = Swiper::load($name);
+    if (empty($options)) {
       \Drupal::logger('swiper')->warning('Invalid option name supplied to swiper_add: @name', ['@name' => $name]);
       return $attached;
     }
@@ -151,20 +151,20 @@ function swiper_add($id = NULL, $options = NULL) {
 
   // If the ID or option aren't set, it is assumed the settings will be set
   // manually via the calling module/theme.
-  if (!empty($option) && !in_array($option->id(), $cache)) {
-    $cache[] = $option->id();
+  if (!empty($options) && !in_array($options->id(), $cache)) {
+    $cache[] = $options->id();
     $attached['drupalSettings']['swiper']['options'] = [
-      $option->id() => $option->getOptions(TRUE),
+      $options->id() => $options->getOptions(TRUE),
     ];
   }
 
   if (!empty($id)) {
     // JavaScript settings.
     $attached['drupalSettings']['swiper']['instances'] = [
-      $id => $option ? $option->id() : '-1',
+      $id => $options ? $options->id() : '-1',
     ];
     // Create an empty optionset setting if none given.
-    if (empty($option)) {
+    if (empty($options)) {
       $attached['drupalSettings']['swiper']['options'] = [
         '-1' => [],
       ];
@@ -181,13 +181,18 @@ function swiper_theme() {
   return [
     // Swiper container.
     'swiper' => [
-      'variables' => ['swiper' => []],
+      'variables' => [
+        'swiper' => [],
+      ],
       'file' => 'includes/swiper.theme.inc',
     ],
 
     // Slide container.
     'swiper_list' => [
-      'variables' => ['items' => [], 'settings' => []],
+      'variables' => [
+        'items' => [],
+        'settings' => [],
+      ],
       'file' => 'includes/swiper.theme.inc',
     ],
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\flexslider\Form;
+namespace Drupal\swiper\Form;
 
 use Drupal\Core\Asset\LibraryDiscovery;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Class SwiperFormSettings.
  *
- * @package Drupal\flexslider\Form
+ * @package Drupal\swiper\Form
  */
 class SwiperFormSettings extends ConfigFormBase {
 
