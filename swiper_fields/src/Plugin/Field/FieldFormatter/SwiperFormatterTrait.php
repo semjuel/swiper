@@ -1,13 +1,13 @@
 <?php
 
-namespace Drupal\swiper\Plugin\Field\FieldFormatter;
+namespace Drupal\swiper_fields\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Url;
 use Drupal\Core\Cache\Cache;
 use Drupal\Component\Utility\Xss;
-use Drupal\flexslider\Entity\Flexslider;
+use Drupal\swiper\Entity\Swiper;
 
 /**
  * A common Trait for swiper formatters.
@@ -18,6 +18,160 @@ use Drupal\flexslider\Entity\Flexslider;
  * @see \Drupal\Core\Field\FormatterBase
  */
 trait SwiperFormatterTrait {
+
+	/**
+	 * Returns the flexslider specific default settings.
+	 *
+	 * @return array
+	 *   An array of default settings for the formatter.
+	 */
+	protected static function getDefaultSettings() {
+		return [
+			'options' => 'default',
+			'caption' => '',
+		];
+	}
+
+	/**
+	 * Builds the swiper settings summary.
+	 *
+	 * @param \Drupal\Core\Field\FormatterBase $formatter
+	 *   The formatter having this trait.
+	 *
+	 * @return array
+	 *   The settings summary build array.
+	 */
+	protected function buildSettingsSummary(FormatterBase $formatter) {
+		$summary = [];
+
+		// Load the selected options.
+		$options = $this->loadOptions($formatter->getSetting('options'));
+
+		// Build the options summary.
+		$os_summary = $options ? $options->label() : $formatter->t('Default settings');
+		$summary[] = $formatter->t('Option: %os_summary', ['%os_summary' => $os_summary]);
+
+		return $summary;
+	}
+
+	/**
+	 * Builds the swiper settings form.
+	 *
+	 * @param \Drupal\Core\Field\FormatterBase $formatter
+	 *   The formatter having this trait.
+	 *
+	 * @return array
+	 *   The render array for Options settings.
+	 */
+	protected function buildSettingsForm(FormatterBase $formatter) {
+
+		// Get list of option sets as an associative array.
+		$options = swiper_options_list();
+
+		$element['options'] = [
+			'#title' => $formatter->t('Options'),
+			'#type' => 'select',
+			'#default_value' => $formatter->getSetting('options'),
+			'#options' => $options,
+		];
+
+		$element['links'] = [
+			'#theme' => 'links',
+			'#links' => [
+				[
+					'title' => $formatter->t('Create new option set'),
+					'url' => Url::fromRoute('entity.swiper.add_form', [], [
+						'query' => \Drupal::destination()->getAsArray()
+					]),
+				],
+				[
+					'title' => $formatter->t('Manage options'),
+					'url' => Url::fromRoute('entity.swiper.collection', [], [
+						'query' => \Drupal::destination()->getAsArray()
+					]),
+				],
+			],
+			'#access' => \Drupal::currentUser()->hasPermission('administer swiper'),
+		];
+
+		return $element;
+	}
+
+	/**
+	 * The swiper formatted view for images.
+	 *
+	 * @param array $images
+	 *   Images render array from the Image Formatter.
+	 * @param array $formatter_settings
+	 *   Render array of settings.
+	 *
+	 * @return array
+	 *   Render of swiper formatted images.
+	 */
+	protected function viewImages(array $images, array $formatter_settings) {
+
+		// Bail out if no images to render.
+		if (empty($images)) {
+			return [];
+		}
+
+		// Get cache tags for the option set.
+		if ($options = $this->loadOptions($formatter_settings['options'])) {
+			$cache_tags = $options->getCacheTags();
+		}
+		else {
+			$cache_tags = [];
+		}
+
+		$items = [];
+
+		foreach ($images as $delta => &$image) {
+
+			// Merge in the cache tags.
+			if ($cache_tags) {
+				$image['#cache']['tags'] = Cache::mergeTags($image['#cache']['tags'], $cache_tags);
+			}
+
+			// Prepare the slide item render array.
+			$item = [];
+			$item['slide'] = render($image);
+
+			// Check caption settings.
+			if ($formatter_settings['caption'] == 1) {
+				$item['caption'] = [
+					'#markup' => Xss::filterAdmin($image['#item']->title)
+				];
+			}
+			elseif ($formatter_settings['caption'] == 'alt') {
+				$item['caption'] = [
+					'#markup' => Xss::filterAdmin($image['#item']->alt)
+				];
+			}
+
+			$items[$delta] = $item;
+		}
+
+		$images['#theme'] = 'swiper';
+		$images['#swiper'] = [
+			'settings' => $formatter_settings,
+			'items' => $items,
+		];
+
+		return $images;
+	}
+
+	/**
+	 * Loads the selected option.
+	 *
+	 * @param string $id
+	 *   This option set id.
+	 *
+	 * @returns \Drupal\swiper\Entity\Swiper
+	 *   The option set selected in the formatter settings.
+	 */
+	protected function loadOptions($id) {
+		return Swiper::load($id);
+	}
 
 	/**
 	 * Returns the form element for caption settings.
@@ -100,47 +254,43 @@ trait SwiperFormatterTrait {
 	}
 
 	/**
-	 * The swiper formatted view for images.
+	 * Return the currently configured option set as a dependency array.
 	 *
-	 * @param array $images
-	 *   Images render array from the Image Formatter.
-	 * @param array $formatter_settings
-	 *   Render array of settings.
+	 * @param \Drupal\Core\Field\FormatterBase $formatter
+	 *   The formatter having this trait.
 	 *
 	 * @return array
-	 *   Render of swiper formatted images.
+	 *   An array of option set dependencies
 	 */
-	protected function viewImages(array $images, array $formatter_settings) {
-
-		// Bail out if no images to render.
-		if (empty($images)) {
-			return [];
+	protected function getOptionsDependencies(FormatterBase $formatter) {
+		$dependencies = [];
+		$option_id = $formatter->getSetting('options');
+		if ($option_id && $options = $this->loadOptions($option_id)) {
+			// Add the options as dependency.
+			$dependencies[$options->getConfigDependencyKey()][] = $options->getConfigDependencyName();
 		}
+		return $dependencies;
+	}
 
-		$items = [];
-
-		foreach ($images as $delta => &$image) {
-			// Prepare the slide item render array.
-			$item = [];
-			$item['slide'] = render($image);
-
-			// Check caption settings.
-			if ($formatter_settings['caption'] == 1) {
-				$item['caption'] = ['#markup' => Xss::filterAdmin($image['#item']->title)];
+	/**
+	 * If a dependency is going to be deleted, set the option set to default.
+	 *
+	 * @param \Drupal\Core\Field\FormatterBase $formatter
+	 *   The formatter having this trait.
+	 * @param array $dependencies_deleted
+	 *   An array of dependencies that will be deleted.
+	 *
+	 * @return bool
+	 *   Whether or not option set dependencies changed.
+	 */
+	protected function optionsDependenciesDeleted(FormatterBase $formatter, array $dependencies_deleted) {
+		$option_id = $formatter->getSetting('options');
+		if ($option_id && $options = $this->loadOptions($option_id)) {
+			if (!empty($dependencies_deleted[$options->getConfigDependencyKey()]) && in_array($options->getConfigDependencyName(), $dependencies_deleted[$options->getConfigDependencyKey()])) {
+				$formatter->setSetting('options', 'default');
+				return TRUE;
 			}
-			elseif ($formatter_settings['caption'] == 'alt') {
-				$item['caption'] = ['#markup' => Xss::filterAdmin($image['#item']->alt)];
-			}
-
-			$items[$delta] = $item;
 		}
-
-		$images['#theme'] = 'swiper';
-		$images['#swiper'] = [
-			'settings' => $formatter_settings,
-			'items' => $items,
-		];
-
-		return $images;
+		return FALSE;
 	}
 }

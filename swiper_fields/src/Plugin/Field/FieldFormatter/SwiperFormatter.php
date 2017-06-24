@@ -1,7 +1,8 @@
 <?php
 
-namespace Drupal\swiper\Plugin\Field\FieldFormatter;
+namespace Drupal\swiper_fields\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\image\Plugin\Field\FieldFormatter\ImageFormatter;
@@ -23,8 +24,27 @@ class SwiperFormatter extends ImageFormatter {
 	/**
 	 * {@inheritdoc}
 	 */
+	public static function defaultSettings() {
+		return self::getDefaultSettings() + parent::defaultSettings();
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
+	public function settingsSummary() {
+		$summary = $this->buildSettingsSummary($this);
+
+		// Add the image settings summary and return.
+		return array_merge($summary, parent::settingsSummary());
+
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
 	public function settingsForm(array $form, FormStateInterface $form_state) {
-		$element = [];
+		// Add the options setting.
+		$element = $this->buildSettingsForm($this);
 
 		// Add the image settings.
 		$element = array_merge($element, parent::settingsForm($form, $form_state));
@@ -43,8 +63,39 @@ class SwiperFormatter extends ImageFormatter {
 	 * {@inheritdoc}
 	 */
 	public function viewElements(FieldItemListInterface $items, $langcode) {
+
 		$images = parent::viewElements($items, $langcode);
 
 		return $this->viewImages($images, $this->getSettings());
+
 	}
+
+	/**
+	 * {@inheritdoc}
+	 */
+	public static function isApplicable(FieldDefinitionInterface $field_definition) {
+		// This formatter only applies to multi-image fields.
+		return parent::isApplicable($field_definition) && $field_definition->getFieldStorageDefinition()->isMultiple();
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
+	public function calculateDependencies() {
+		$dependencies = parent::calculateDependencies();
+		return $dependencies + $this->getOptionsDependencies($this);
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
+	public function onDependencyRemoval(array $dependencies) {
+		$changed = parent::onDependencyRemoval($dependencies);
+
+		if ($this->optionsDependenciesDeleted($this, $dependencies)) {
+			$changed = TRUE;
+		}
+		return $changed;
+	}
+
 }
