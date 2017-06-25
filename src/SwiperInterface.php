@@ -34,7 +34,7 @@ interface SwiperInterface extends ConfigEntityInterface {
   public function getOption($name);
 
   /**
-   * Sets the flexslider library options array.
+   * Sets the swiper library options array.
    *
    * @param array $options
    *   New/updated array of options.

@@ -47,8 +47,7 @@
   function _swiper_init(id, options, context) {
     $('#' + id, context).once('swiper').each(function () {
       if (options) {
-        // @TODO implement integration with options.
-        new Swiper('#' + id, {});
+        new Swiper('#' + id, options);
       }
       else {
         new Swiper('#' + id);

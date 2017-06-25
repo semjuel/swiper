@@ -20,7 +20,7 @@ use Drupal\swiper\Entity\Swiper;
 trait SwiperFormatterTrait {
 
 	/**
-	 * Returns the flexslider specific default settings.
+	 * Returns the swiper specific default settings.
 	 *
 	 * @return array
 	 *   An array of default settings for the formatter.
